@@ -1,61 +1,105 @@
 #include <iostream>
 #include <fstream>
 #include <string>
-#include <vector>
 #include <sstream>
-#include <algorithm>
+#include <algorithm> // Still needed for transform, remove_if, ispunct
 #include <iomanip>
-#include <chrono>   // for milliseconds timing
+#include <chrono>    // for milliseconds timing
+// NOTE: <vector> and <list> are now excluded
 using namespace std;
 
 // ====== SETTINGS ======
-const int RESUME_LIMIT = 10000;
-const int JOB_LIMIT    = 10000;
+const int RESUME_LIMIT = 10000; // Not strictly used after removing vector sizing logic, but kept for context
+const int JOB_LIMIT    = 10000; // Same as above
 // ======================
 
 // Linked List Node
 struct Node {
     string text;
     string originalText;
+    int index; // Added to store index for filtering (replaces skillResumes vector)
     Node* next;
-    Node(string t, string o) : text(t), originalText(o), next(nullptr) {}
+
+    // Constructor for text/originalText storage (for CSV data)
+    Node(string t, string o) : text(t), originalText(o), index(-1), next(nullptr) {}
+    
+    // Constructor for index storage (for skillResumes indices)
+    Node(int i) : text(""), originalText(""), index(i), next(nullptr) {} 
+
+    // Constructor for tokens (text only)
+    Node(string t) : text(t), originalText(""), index(-1), next(nullptr) {}
 };
 
-// Linked List
+// Linked List Class - Used for CSV data, tokens, and filtered indices
 class LinkedList {
 private:
     Node* head;
+    int count; // Keep track of size without a vector
 public:
-    LinkedList() : head(nullptr) {}
+    LinkedList() : head(nullptr), count(0) {}
+    ~LinkedList() { // Added destructor for proper memory cleanup
+        Node* current = head;
+        Node* next;
+        while (current != nullptr) {
+            next = current->next;
+            delete current;
+            current = next;
+        }
+        head = nullptr;
+    }
 
-    void insert(string value) {
+    // Insert for CSV data
+    void insert(string value, int idx = -1) {
         string lower = value;
         transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
         Node* newNode = new Node(lower, value);
-        if (!head) { head = newNode; return; }
-        Node* temp = head;
-        while (temp->next) temp = temp->next;
-        temp->next = newNode;
+        newNode->index = idx; // Store index if provided (for job/resume lists)
+
+        if (!head) { head = newNode; }
+        else {
+            Node* temp = head;
+            while (temp->next) temp = temp->next;
+            temp->next = newNode;
+        }
+        count++;
     }
 
-    vector<string> toVectorLower() {
-        vector<string> vec;
-        Node* temp = head;
-        while (temp) {
-            vec.push_back(temp->text);
-            temp = temp->next;
+    // Insert for index (to replace skillResumes vector)
+    void insertIndex(int idx) {
+        Node* newNode = new Node(idx);
+        if (!head) { head = newNode; }
+        else {
+            Node* temp = head;
+            while (temp->next) temp = temp->next;
+            temp->next = newNode;
         }
-        return vec;
+        count++;
     }
 
-    vector<string> toVectorOriginal() {
-        vector<string> vec;
+    // Insert for token (lower case only)
+    void insertToken(string lowerToken) {
+        Node* newNode = new Node(lowerToken);
+        if (!head) { head = newNode; }
+        else {
+            Node* temp = head;
+            while (temp->next) temp = temp->next;
+            temp->next = newNode;
+        }
+        count++;
+    }
+
+    int size() const { return count; }
+    Node* getHead() const { return head; }
+
+    // Helper function to get data at a specific index (Replaces vector[i] access)
+    // NOTE: This O(N) access is a major performance change from O(1) vector access.
+    Node* get(int idx) {
+        if (idx < 0 || idx >= count) return nullptr;
         Node* temp = head;
-        while (temp) {
-            vec.push_back(temp->originalText);
+        for (int i = 0; i < idx; ++i) {
             temp = temp->next;
         }
-        return vec;
+        return temp;
     }
 };
 
@@ -69,42 +113,57 @@ bool loadCSV(string filename, LinkedList &list) {
 
     string line;
     getline(file, line); // skip header
+    int index = 0;
     while (getline(file, line)) {
         if (!line.empty()) {
             if (line.front() == '"' && line.back() == '"')
                 line = line.substr(1, line.size() - 2);
-            list.insert(line);
+            list.insert(line, index++);
         }
     }
     file.close();
     return true;
 }
 
-// Tokenize text
-vector<string> tokenize(string text) {
-    vector<string> tokens;
+// Tokenize text - now returns a LinkedList instead of a vector
+LinkedList tokenize(string text) {
+    LinkedList tokens;
     stringstream ss(text);
     string word;
     while (ss >> word) {
         word.erase(remove_if(word.begin(), word.end(), ::ispunct), word.end());
         if (!word.empty())
-            tokens.push_back(word);
+            tokens.insertToken(word); // Store token in the linked list
     }
     return tokens;
 }
 
-// Count overlapping words
-int countMatches(const vector<string> &rwords, const vector<string> &jwords) {
+// Helper: Check if a string exists in a LinkedList of tokens
+bool findInList(const LinkedList &list, const string &target) {
+    Node* temp = list.getHead();
+    while (temp) {
+        if (temp->text == target) return true;
+        temp = temp->next;
+    }
+    return false;
+}
+
+// Count overlapping words - takes LinkedLists
+int countMatches(const LinkedList &rwords, const LinkedList &jwords) {
     int count = 0;
-    for (const string &rw : rwords) {
-        if (find(jwords.begin(), jwords.end(), rw) != jwords.end())
+    Node* rTemp = rwords.getHead();
+    while (rTemp) {
+        // Use the new helper function to replace std::find
+        if (findInList(jwords, rTemp->text))
             count++;
+        rTemp = rTemp->next;
     }
     return count;
 }
 
 // MAIN PROGRAM
 int main() {
+    // LinkedLists replace the vectors for storing all CSV data
     LinkedList resumes, jobs;
     string resumePath = "resume.csv";
     string jobPath = "job_description.csv";
@@ -119,13 +178,8 @@ int main() {
         return 0;
     }
 
-    vector<string> resumeListLower = resumes.toVectorLower();
-    vector<string> resumeListOriginal = resumes.toVectorOriginal();
-    vector<string> jobListLower = jobs.toVectorLower();
-    vector<string> jobListOriginal = jobs.toVectorOriginal();
-
-    cout << "Loaded " << resumeListLower.size() << " resumes." << endl;
-    cout << "Loaded " << jobListLower.size() << " jobs." << endl;
+    cout << "Loaded " << resumes.size() << " resumes." << endl;
+    cout << "Loaded " << jobs.size() << " jobs." << endl;
 
     string skill;
     cout << "\nEnter skill to search: ";
@@ -136,17 +190,24 @@ int main() {
     cout << "STAGE 1: FILTER BY SKILL (" << skill << ")" << endl;
     cout << "===============================" << endl;
 
-    vector<int> skillResumes;
-    for (int i = 0; i < (int)resumeListLower.size(); i++) {
-        if (resumeListLower[i].find(skill) != string::npos) {
-            skillResumes.push_back(i);
-            cout << "Resume " << i + 1 << ": " << resumeListOriginal[i] << endl;
+    // LinkedList replaces the skillResumes vector
+    LinkedList skillResumesIndices; 
+    
+    // Iterate over the LinkedList for filtering
+    Node* currentResume = resumes.getHead();
+    int i = 0;
+    while (currentResume) {
+        if (currentResume->text.find(skill) != string::npos) {
+            skillResumesIndices.insertIndex(i); // Store the index
+            cout << "Resume " << i + 1 << ": " << currentResume->originalText << endl;
         }
+        currentResume = currentResume->next;
+        i++;
     }
 
-    cout << "\nTotal resumes found with skill '" << skill << "': " << skillResumes.size() << endl;
+    cout << "\nTotal resumes found with skill '" << skill << "': " << skillResumesIndices.size() << endl;
 
-    if (skillResumes.empty()) {
+    if (skillResumesIndices.size() == 0) {
         cout << "No resumes contain this skill. Exiting program.\n";
         return 0;
     }
@@ -155,7 +216,7 @@ int main() {
     cout << "STAGE 1 SUMMARY\n";
     cout << "=========================================\n";
     cout << "Skill searched: " << skill << endl;
-    cout << "Matching resumes found: " << skillResumes.size() << endl;
+    cout << "Matching resumes found: " << skillResumesIndices.size() << endl;
     cout << "-----------------------------------------\n";
 
     int chosenIndex;
@@ -166,7 +227,18 @@ int main() {
         return 0;
     }
 
-    if (find(skillResumes.begin(), skillResumes.end(), chosenIndex - 1) == skillResumes.end()) {
+    // Check if chosenIndex is valid by iterating the skillResumesIndices list
+    bool validChoice = false;
+    Node* currentIdxNode = skillResumesIndices.getHead();
+    while(currentIdxNode) {
+        if (currentIdxNode->index == chosenIndex - 1) {
+            validChoice = true;
+            break;
+        }
+        currentIdxNode = currentIdxNode->next;
+    }
+
+    if (!validChoice) {
         cout << "Invalid choice. Please select one of the resumes listed above.\n";
         return 0;
     }
@@ -182,16 +254,30 @@ int main() {
     auto start = chrono::high_resolution_clock::now();
 
     int idx = chosenIndex - 1;
-    cout << "Resume " << chosenIndex << ": " << resumeListOriginal[idx] << endl;
+    // Get the chosen resume data using the O(N) get() helper
+    Node* chosenResumeNode = resumes.get(idx);
+    if (!chosenResumeNode) {
+        cout << "Internal error: Resume not found.\n";
+        return 0;
+    }
 
-    vector<string> rwords = tokenize(resumeListLower[idx]);
+    cout << "Resume " << chosenIndex << ": " << chosenResumeNode->originalText << endl;
+
+    // Tokenize the chosen resume text into a LinkedList
+    LinkedList rwords = tokenize(chosenResumeNode->text); 
     bool foundQualified = false;
     int qualifiedCount = 0;
 
-    for (int j = 0; j < (int)jobListLower.size(); j++) {
-        vector<string> jwords = tokenize(jobListLower[j]);
+    // Iterate through the jobs LinkedList
+    Node* currentJob = jobs.getHead();
+    int j = 0;
+    while (currentJob) {
+        // Tokenize the current job description text into a LinkedList
+        LinkedList jwords = tokenize(currentJob->text); 
         int matches = countMatches(rwords, jwords);
-        double percent = ((double)matches / rwords.size()) * 100.0;
+        
+        // Size is now retrieved from the LinkedList's count field
+        double percent = ((double)matches / rwords.size()) * 100.0; 
 
         if (percent >= matchThreshold) {
             if (!foundQualified)
@@ -200,8 +286,11 @@ int main() {
             qualifiedCount++;
             cout << "   - Job " << j + 1 << " (" << fixed << setprecision(2)
                  << percent << "%)\n";
-            cout << "     " << jobListOriginal[j] << endl;
+            cout << "     " << currentJob->originalText << endl;
         }
+
+        currentJob = currentJob->next;
+        j++;
     }
 
     auto end = chrono::high_resolution_clock::now();
@@ -210,7 +299,7 @@ int main() {
     cout << "\n=========================================\n";
     cout << "STAGE 2 SUMMARY (RESUME " << chosenIndex << ")\n";
     cout << "=========================================\n";
-    cout << "Total jobs checked: " << jobListLower.size() << endl;
+    cout << "Total jobs checked: " << jobs.size() << endl;
     cout << "Jobs " << matchThreshold << "% and above match: " << qualifiedCount << endl;
     if (qualifiedCount == 0)
         cout << "This resume did not qualify for any job.\n";
