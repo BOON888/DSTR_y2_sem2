@@ -5,7 +5,6 @@
 #include <cctype>
 #include <chrono>
 #include <algorithm>
-#include <vector>
 #include <direct.h>
 using namespace std;
 
@@ -125,7 +124,7 @@ int calculateScore(const string& jobDesc, const string& resumeDesc) {
 // =============================
 void readCSV(const string& filename, DynamicArray<Job>& jobs, DynamicArray<Resume>& resumes) {
     // Try opening the file from several likely locations (cwd, parent, ArrayList, etc.)
-    vector<string> candidates;
+    DynamicArray<string> candidates;
     candidates.push_back(filename);
     candidates.push_back(string("..\\") + filename);
     candidates.push_back(string("../") + filename);
@@ -134,9 +133,9 @@ void readCSV(const string& filename, DynamicArray<Job>& jobs, DynamicArray<Resum
 
     ifstream file;
     string openedPath;
-    for (const auto &p : candidates) {
-        file.open(p);
-        if (file.is_open()) { openedPath = p; break; }
+    for (int i = 0; i < candidates.size(); ++i) {
+        file.open(candidates[i]);
+        if (file.is_open()) { openedPath = candidates[i]; break; }
     }
     if (!file.is_open()) {
         // Print helpful diagnostics
@@ -146,7 +145,7 @@ void readCSV(const string& filename, DynamicArray<Job>& jobs, DynamicArray<Resum
         cerr << "Error opening file: " << filename << endl;
         cerr << "Current working directory: " << cwdBuf << endl;
         cerr << "Attempted paths:" << endl;
-        for (const auto &p : candidates) cerr << "  " << p << endl;
+        for (int i = 0; i < candidates.size(); ++i) cerr << "  " << candidates[i] << endl;
         return;
     }
     if (openedPath != filename) {
@@ -236,6 +235,36 @@ void findBestMatches(DynamicArray<Job>& jobs, DynamicArray<Resume>& resumes) {
     cout << "\n[INFO] Processing time: " << duration << " ms" << endl;
 }
 
+// Find top N jobs matching a skill (skill string may be single token like "SQL")
+// Find all jobs matching a skill (returns indices of jobs with positive relevance), array-based only
+DynamicArray<int> findJobsBySkill(const string& skill, DynamicArray<Job>& jobs) {
+    struct ScoreIdx { int score; int idx; };
+    DynamicArray<ScoreIdx> scores;
+    for (int i = 0; i < jobs.size(); ++i) {
+        int s = calculateScore(jobs[i].description, skill);
+        scores.push_back({s, i});
+    }
+
+    DynamicArray<int> result;
+    // repeatedly pick the best remaining positive score
+    while (true) {
+        int bestPos = -1;
+        for (int j = 0; j < scores.size(); ++j) {
+            if (scores[j].score <= 0) continue;
+            if (bestPos == -1 || scores[j].score > scores[bestPos].score ||
+                (scores[j].score == scores[bestPos].score && scores[j].idx < scores[bestPos].idx)) {
+                bestPos = j;
+            }
+        }
+        if (bestPos == -1) break;
+        result.push_back(scores[bestPos].idx);
+        // mark as taken
+        scores[bestPos].score = -1;
+    }
+
+    return result;
+}
+
 // =============================
 // 7. Main Function
 // =============================
@@ -251,7 +280,68 @@ int main() {
     readCSV(resFile, jobs, resumes); // resumes go into same arrays based on filename check
 
     cout << "=== ARRAY-BASED JOB MATCHING SYSTEM ===\n" << endl;
-    findBestMatches(jobs, resumes);
+
+    // Interactive skill search
+    cout << "Enter a skill to search for (e.g. SQL): ";
+    string skill;
+    if (!getline(cin, skill)) skill = "";
+    trimString(skill);
+    if (skill.empty()) {
+        cout << "No skill entered — showing overall best matches instead.\n";
+        findBestMatches(jobs, resumes);
+        return 0;
+    }
+
+    DynamicArray<int> topJobs = findJobsBySkill(skill, jobs);
+    if (topJobs.size() == 0) {
+        cout << "No jobs found matching skill '" << skill << "'.\n";
+        return 0;
+    }
+
+    cout << "Top " << topJobs.size() << " jobs matching '" << skill << "':\n";
+    for (int i = 0; i < topJobs.size(); ++i) {
+        int idx = topJobs[i];
+        cout << (i+1) << ") [" << jobs[idx].id << "] " << jobs[idx].description.substr(0, 120)
+             << (jobs[idx].description.size() > 120 ? "..." : "") << "\n\n";
+    }
+
+    // Ask user to choose one (by number) and confirm (yes/no)
+    cout << "Choose a job number to inspect (1-" << topJobs.size() << ") or 0 to exit: ";
+    string choiceStr;
+    if (!getline(cin, choiceStr)) return 0;
+    int choice = stoi(choiceStr.empty() ? "0" : choiceStr);
+    if (choice <= 0 || choice > topJobs.size()) {
+        cout << "Exiting.\n";
+        return 0;
+    }
+    int chosenIdx = topJobs[choice-1];
+
+    cout << "You selected job [" << jobs[chosenIdx].id << "]:\n" << jobs[chosenIdx].description << "\n";
+    cout << "Confirm inspection? (yes/no): ";
+    string confirm;
+    if (!getline(cin, confirm)) confirm = "no";
+    trimString(confirm);
+    transform(confirm.begin(), confirm.end(), confirm.begin(), ::tolower);
+    if (confirm != "yes" && confirm != "y") {
+        cout << "Cancelled by user.\n";
+        return 0;
+    }
+
+    // Find best resume match for the chosen job
+    int bestScore = -1;
+    string bestResumeId = "";
+    for (int j = 0; j < resumes.size(); ++j) {
+        int score = calculateScore(jobs[chosenIdx].description, resumes[j].description);
+        if (score > bestScore) {
+            bestScore = score;
+            bestResumeId = resumes[j].id;
+        }
+    }
+
+    cout << "Best matching resume for job [" << jobs[chosenIdx].id << "] is: " << bestResumeId
+         << " (score=" << bestScore << ")\n";
+
+    return 0;
 
     return 0;
 }
