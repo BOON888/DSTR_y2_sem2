@@ -2,224 +2,261 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <vector>
 #include <algorithm>
-#include <cctype>
-#include <set>
+#include <chrono>
 using namespace std;
+using namespace std::chrono;
 
-// ==========================
-// Utility: Clean text (remove punctuation, lowercase)
-// ==========================
-string cleanText(string text) {
-    string result;
-    for (char c : text) {
-        if (isalpha(c) || isdigit(c) || isspace(c)) {
-            result += tolower(c);
-        }
-    }
-    return result;
-}
-
-// ==========================
-// Structures for Job & Resume
-// ==========================
-struct Job {
-    string jobId;
+// ---------- Linked List Node Structures ----------
+struct JobNode {
     string description;
+    JobNode* next;
 };
 
-struct Resume {
-    string resumeId;
-    string text;
+struct ResumeNode {
+    string description;
+    ResumeNode* next;
 };
 
-// ==========================
-// Generic Linked List
-// ==========================
-template <typename T>
-struct Node {
-    T data;
-    Node* next;
-    Node(T value) : data(value), next(nullptr) {}
-};
-
-template <typename T>
-class LinkedList {
-private:
-    Node<T>* head;
-    int count;
-public:
-    LinkedList() : head(nullptr), count(0) {}
-
-    ~LinkedList() {
-        Node<T>* current = head;
-        while (current) {
-            Node<T>* nextNode = current->next;
-            delete current;
-            current = nextNode;
-        }
-    }
-
-    void append(T value) {
-        Node<T>* newNode = new Node<T>(value);
-        if (!head) {
-            head = newNode;
-        } else {
-            Node<T>* temp = head;
-            while (temp->next) temp = temp->next;
-            temp->next = newNode;
-        }
-        count++;
-    }
-
-    Node<T>* getHead() const { return head; }
-    int size() const { return count; }
-
-    void display(); // specialized below
-};
-
-// Specialization: Job display
-template<>
-void LinkedList<Job>::display() {
-    cout << "--- Displaying Job Postings ---" << endl;
-    Node<Job>* temp = getHead();
-    int displayCount = 0;
-    while (temp && displayCount < 5) {
-        cout << "Job ID: " << temp->data.jobId 
-             << "\nDescription: " << temp->data.description.substr(0, 70) << "..." << endl;
-        cout << "--------------------------------" << endl;
-        temp = temp->next;
-        displayCount++;
-    }
-    cout << "Total jobs loaded: " << size() << endl;
+// ---------- Utility Functions ----------
+string toLowerCase(string s) {
+    transform(s.begin(), s.end(), s.begin(), ::tolower);
+    return s;
 }
 
-// Specialization: Resume display
-template<>
-void LinkedList<Resume>::display() {
-    cout << "\n--- Displaying Resumes ---" << endl;
-    Node<Resume>* temp = getHead();
-    int displayCount = 0;
-    while (temp && displayCount < 5) {
-        cout << "Resume ID: " << temp->data.resumeId 
-             << "\nText: " << temp->data.text.substr(0, 70) << "..." << endl;
-        cout << "--------------------------------" << endl;
-        temp = temp->next;
-        displayCount++;
-    }
-    cout << "Total resumes loaded: " << size() << endl;
-}
-
-// ==========================
-// CSV Loaders
-// ==========================
-void loadJobsFromCSV(const string& filename, LinkedList<Job>& jobList) {
-    ifstream file(filename);
-    if (!file.is_open()) {
-        cerr << "Error: Could not open file " << filename << endl;
-        return;
-    }
-    string line;
-    getline(file, line); // skip header if exists
-
-    int jobCounter = 1;
-    while (getline(file, line)) {
-        if (!line.empty()) {
-            string jobId = "J" + to_string(jobCounter++);
-            Job newJob = {jobId, line};
-            jobList.append(newJob);
-        }
-    }
-    file.close();
-    cout << "Successfully loaded data from " << filename << endl;
-}
-
-void loadResumesFromCSV(const string& filename, LinkedList<Resume>& resumeList) {
-    ifstream file(filename);
-    if (!file.is_open()) {
-        cerr << "Error: Could not open file " << filename << endl;
-        return;
-    }
-    string line;
-    getline(file, line); // skip header if exists
-
-    int resumeCounter = 1;
-    while (getline(file, line)) {
-        if (!line.empty()) {
-            string resumeId = "R" + to_string(resumeCounter++);
-            Resume newResume = {resumeId, line};
-            resumeList.append(newResume);
-        }
-    }
-    file.close();
-    cout << "Successfully loaded data from " << filename << endl;
-}
-
-// ==========================
-// Matching Algorithm
-// ==========================
-int matchScore(string job, string resume) {
-    job = cleanText(job);
-    resume = cleanText(resume);
-
-    istringstream j(job), r(resume);
-    set<string> jobWords, resumeWords;
+vector<string> splitWords(const string& text) {
+    vector<string> words;
     string word;
-
-    while (j >> word) jobWords.insert(word);
-    while (r >> word) resumeWords.insert(word);
-
-    int score = 0;
-    for (auto &w : jobWords) {
-        if (resumeWords.find(w) != resumeWords.end()) score++;
-    }
-    return score;
-}
-
-void matchJobs(LinkedList<Job>& jobs, LinkedList<Resume>& resumes) {
-    Node<Job>* jobNode = jobs.getHead();
-    while (jobNode) {
-        Node<Resume>* resNode = resumes.getHead();
-        int bestScore = -1;
-        Resume bestMatch;
-
-        while (resNode) {
-            int score = matchScore(jobNode->data.description, resNode->data.text);
-            if (score > bestScore) {
-                bestScore = score;
-                bestMatch = resNode->data;
-            }
-            resNode = resNode->next;
+    for (char c : text) {
+        if (isalnum(c))
+            word += c;
+        else if (!word.empty()) {
+            words.push_back(word);
+            word.clear();
         }
-
-        cout << "\nJob ID: " << jobNode->data.jobId
-             << "\nDescription: " << jobNode->data.description.substr(0, 60) << "..."
-             << "\nBest Match Resume: " << bestMatch.resumeId
-             << "\nScore: " << bestScore << endl;
-        cout << "--------------------------------" << endl;
-
-        jobNode = jobNode->next;
     }
+    if (!word.empty()) words.push_back(word);
+    return words;
 }
 
-// ==========================
-// Main Program
-// ==========================
+bool containsKeyword(const string& text, const string& keyword) {
+    return text.find(keyword) != string::npos;
+}
+
+// Calculate match percentage between job and resume
+double calculateMatchPercentage(const string& jobDesc, const string& resumeDesc) {
+    vector<string> jobWords = splitWords(toLowerCase(jobDesc));
+    vector<string> resumeWords = splitWords(toLowerCase(resumeDesc));
+
+    // Ignore filler words
+    vector<string> ignoreList = {"in","with","and","the","to","for","needed","required","experience",
+                                 "skills","of","a","an","as","on","by","at","have","has","is","are",
+                                 "job","role","responsibilities","looking","must","be","work"};
+
+    auto isIgnored = [&](const string& word) {
+        return find(ignoreList.begin(), ignoreList.end(), word) != ignoreList.end();
+    };
+
+    vector<string> jobSkills;
+    for (auto& w : jobWords)
+        if (!isIgnored(w)) jobSkills.push_back(w);
+
+    if (jobSkills.empty()) return 0.0;
+
+    int matched = 0;
+    for (const string& jw : jobSkills) {
+        for (const string& rw : resumeWords) {
+            if (jw == rw) {
+                matched++;
+                break;
+            }
+        }
+    }
+
+    return (matched * 100.0) / jobSkills.size();
+}
+
+// ---------- Load CSV Data ----------
+JobNode* loadJobs(const string& filename) {
+    ifstream file(filename);
+    if (!file.is_open()) {
+        cout << "Error opening job file: " << filename << endl;
+        return nullptr;
+    }
+
+    JobNode* head = nullptr;
+    JobNode* tail = nullptr;
+    string line;
+
+    while (getline(file, line)) {
+        if (line.empty()) continue;
+        JobNode* newNode = new JobNode{line, nullptr};
+        if (!head)
+            head = tail = newNode;
+        else {
+            tail->next = newNode;
+            tail = newNode;
+        }
+    }
+
+    file.close();
+    return head;
+}
+
+ResumeNode* loadResumes(const string& filename) {
+    ifstream file(filename);
+    if (!file.is_open()) {
+        cout << "Error opening resume file: " << filename << endl;
+        return nullptr;
+    }
+
+    ResumeNode* head = nullptr;
+    ResumeNode* tail = nullptr;
+    string line;
+
+    while (getline(file, line)) {
+        if (line.empty()) continue;
+        ResumeNode* newNode = new ResumeNode{line, nullptr};
+        if (!head)
+            head = tail = newNode;
+        else {
+            tail->next = newNode;
+            tail = newNode;
+        }
+    }
+
+    file.close();
+    return head;
+}
+
+// ---------- Main Program ----------
 int main() {
-    LinkedList<Job> jobList;
-    LinkedList<Resume> resumeList;
+    cout << "=== Job Matching System (Linked List Based) ===" << endl;
 
-    loadJobsFromCSV("job_description.csv", jobList);
-    loadResumesFromCSV("resume.csv", resumeList);
+    JobNode* jobHead = loadJobs("job_description.csv");
+    ResumeNode* resumeHead = loadResumes("resume.csv");
 
-    cout << "\nData loading complete. Verifying contents..." << endl;
-    cout << "============================================" << endl;
+    if (!jobHead || !resumeHead) {
+        cout << "Error loading CSV files." << endl;
+        return 1;
+    }
 
-    jobList.display();
-    resumeList.display();
+    string keyword;
+    cout << "\nEnter a skill keyword to search (example: sql): ";
+    cin >> keyword;
+    keyword = toLowerCase(keyword);
 
-    cout << "\n=== Job Matching Results ===" << endl;
-    matchJobs(jobList, resumeList);
+    vector<JobNode*> matchedJobs;
+    JobNode* tempJob = jobHead;
+
+    // Search for matching jobs
+    while (tempJob) {
+        if (containsKeyword(toLowerCase(tempJob->description), keyword)) {
+            matchedJobs.push_back(tempJob);
+        }
+        tempJob = tempJob->next;
+    }
+
+    if (matchedJobs.empty()) {
+        cout << "\nNo job descriptions found with that skill." << endl;
+        return 0;
+    }
+
+    cout << "\nJobs found with \"" << keyword << "\":\n" << endl;
+
+    int showLimit = min(20, (int)matchedJobs.size());
+    for (int i = 0; i < showLimit; i++) {
+        cout << i + 1 << ". " << matchedJobs[i]->description << endl;
+    }
+
+    if ((int)matchedJobs.size() > 20) {
+        char choice;
+        cout << "\nMore than 20 jobs found. Do you want to see all? (y/n): ";
+        cin >> choice;
+
+        if (tolower(choice) == 'y') {
+            for (int i = 20; i < (int)matchedJobs.size(); i++) {
+                cout << i + 1 << ". " << matchedJobs[i]->description << endl;
+            }
+        }
+    }
+
+    cout << "\nTotal jobs found: " << matchedJobs.size() << endl;
+
+    int jobChoice;
+    cout << "\nEnter the job number you want to analyze: ";
+    cin >> jobChoice;
+
+    if (jobChoice < 1 || jobChoice > (int)matchedJobs.size()) {
+        cout << "Invalid job number!" << endl;
+        return 0;
+    }
+
+    double minPercentage;
+    cout << "Enter the minimum percentage to display resumes (example: 50): ";
+    cin >> minPercentage;
+
+    JobNode* selectedJob = matchedJobs[jobChoice - 1];
+    cout << "\nSelected Job Description:\n" << selectedJob->description << endl;
+
+    cout << "\n--- Resume Match Results ---" << endl;
+
+    // Start timing
+    auto startTime = high_resolution_clock::now();
+
+    ResumeNode* tempResume = resumeHead;
+    vector<pair<string, double>> resumeResults;
+    int resumeIndex = 1;
+
+    while (tempResume) {
+        double score = calculateMatchPercentage(selectedJob->description, tempResume->description);
+        if (score >= minPercentage && score > 0.0) {
+            resumeResults.push_back({tempResume->description, score});
+        }
+        tempResume = tempResume->next;
+        resumeIndex++;
+    }
+
+    // Show only first 20 resumes
+    int resumeLimit = min(20, (int)resumeResults.size());
+    for (int i = 0; i < resumeLimit; i++) {
+        cout << i + 1 << ". " << resumeResults[i].first << endl;
+        cout << "   Score: " << resumeResults[i].second << "%" << endl << endl;
+    }
+
+    if ((int)resumeResults.size() > 20) {
+        char choice;
+        cout << "More than 20 resumes found. Do you want to see more resumes? (y/n): ";
+        cin >> choice;
+
+        if (tolower(choice) == 'y') {
+            for (int i = 20; i < (int)resumeResults.size(); i++) {
+                cout << i + 1 << ". " << resumeResults[i].first << endl;
+                cout << "   Score: " << resumeResults[i].second << "%" << endl << endl;
+            }
+        }
+    }
+
+    // Stop timing
+    auto endTime = high_resolution_clock::now();
+    auto duration = duration_cast<milliseconds>(endTime - startTime);
+
+    cout << "Total resumes matched: " << resumeResults.size() << endl;
+    cout << "Matching complete." << endl;
+    cout << "Total time used for parsing resumes: " << duration.count() << " ms" << endl;
+
+    // Free memory
+    while (jobHead) {
+        JobNode* temp = jobHead;
+        jobHead = jobHead->next;
+        delete temp;
+    }
+    while (resumeHead) {
+        ResumeNode* temp = resumeHead;
+        resumeHead = resumeHead->next;
+        delete temp;
+    }
 
     return 0;
 }
