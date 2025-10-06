@@ -2,7 +2,6 @@
 #include <fstream>
 #include <sstream>
 #include <string>
-#include <vector>
 #include <algorithm>
 #include <chrono>
 using namespace std;
@@ -19,14 +18,66 @@ struct ResumeNode {
     ResumeNode* next;
 };
 
+// ---------- Custom Container Templates ----------
+template<typename T>
+struct MyNode {
+    T data;
+    MyNode* next;
+};
+
+template<typename T>
+class MyList {
+private:
+    MyNode<T>* head;
+    MyNode<T>* tail;
+    int count;
+
+public:
+    MyList() : head(nullptr), tail(nullptr), count(0) {}
+
+    void push_back(const T& value) {
+        MyNode<T>* newNode = new MyNode<T>{value, nullptr};
+        if (!head)
+            head = tail = newNode;
+        else {
+            tail->next = newNode;
+            tail = newNode;
+        }
+        count++;
+    }
+
+    T& at(int index) {
+        MyNode<T>* temp = head;
+        for (int i = 0; i < index && temp; i++) temp = temp->next;
+        return temp->data;
+    }
+
+    int size() const { return count; }
+
+    void clear() {
+        while (head) {
+            MyNode<T>* temp = head;
+            head = head->next;
+            delete temp;
+        }
+        tail = nullptr;
+        count = 0;
+    }
+
+    ~MyList() { clear(); }
+
+    // Iterator-like traversal
+    MyNode<T>* getHead() const { return head; }
+};
+
 // ---------- Utility Functions ----------
 string toLowerCase(string s) {
     transform(s.begin(), s.end(), s.begin(), ::tolower);
     return s;
 }
 
-vector<string> splitWords(const string& text) {
-    vector<string> words;
+MyList<string> splitWords(const string& text) {
+    MyList<string> words;
     string word;
     for (char c : text) {
         if (isalnum(c))
@@ -44,34 +95,49 @@ bool containsKeyword(const string& text, const string& keyword) {
     return text.find(keyword) != string::npos;
 }
 
-// Calculate match percentage between job and resume
+// ---------- Ignore Word List ----------
+const string ignoreWordsArr[] = {
+    "in","with","and","the","to","for","needed","required","experience",
+    "skills","of","a","an","as","on","by","at","have","has","is","are",
+    "job","role","responsibilities","looking","must","be","work"
+};
+const int ignoreWordCount = sizeof(ignoreWordsArr) / sizeof(ignoreWordsArr[0]);
+
+bool isIgnoredWord(const string& word) {
+    for (int i = 0; i < ignoreWordCount; i++) {
+        if (ignoreWordsArr[i] == word)
+            return true;
+    }
+    return false;
+}
+
+// ---------- Calculate Match Percentage ----------
 double calculateMatchPercentage(const string& jobDesc, const string& resumeDesc) {
-    vector<string> jobWords = splitWords(toLowerCase(jobDesc));
-    vector<string> resumeWords = splitWords(toLowerCase(resumeDesc));
+    MyList<string> jobWords = splitWords(toLowerCase(jobDesc));
+    MyList<string> resumeWords = splitWords(toLowerCase(resumeDesc));
 
-    // Ignore filler words
-    vector<string> ignoreList = {"in","with","and","the","to","for","needed","required","experience",
-                                 "skills","of","a","an","as","on","by","at","have","has","is","are",
-                                 "job","role","responsibilities","looking","must","be","work"};
+    MyList<string> jobSkills;
+    MyNode<string>* jwNode = jobWords.getHead();
+    while (jwNode) {
+        if (!isIgnoredWord(jwNode->data))
+            jobSkills.push_back(jwNode->data);
+        jwNode = jwNode->next;
+    }
 
-    auto isIgnored = [&](const string& word) {
-        return find(ignoreList.begin(), ignoreList.end(), word) != ignoreList.end();
-    };
-
-    vector<string> jobSkills;
-    for (auto& w : jobWords)
-        if (!isIgnored(w)) jobSkills.push_back(w);
-
-    if (jobSkills.empty()) return 0.0;
+    if (jobSkills.size() == 0) return 0.0;
 
     int matched = 0;
-    for (const string& jw : jobSkills) {
-        for (const string& rw : resumeWords) {
-            if (jw == rw) {
+    MyNode<string>* jobSkillNode = jobSkills.getHead();
+    while (jobSkillNode) {
+        MyNode<string>* rwNode = resumeWords.getHead();
+        while (rwNode) {
+            if (jobSkillNode->data == rwNode->data) {
                 matched++;
                 break;
             }
+            rwNode = rwNode->next;
         }
+        jobSkillNode = jobSkillNode->next;
     }
 
     return (matched * 100.0) / jobSkills.size();
@@ -132,7 +198,7 @@ ResumeNode* loadResumes(const string& filename) {
 
 // ---------- Main Program ----------
 int main() {
-    cout << "=== Job Matching System (Linked List Based) ===" << endl;
+    cout << "=== Job Matching System (Linked List Based, No STL Containers) ===" << endl;
 
     JobNode* jobHead = loadJobs("job_description.csv");
     ResumeNode* resumeHead = loadResumes("resume.csv");
@@ -147,7 +213,7 @@ int main() {
     cin >> keyword;
     keyword = toLowerCase(keyword);
 
-    vector<JobNode*> matchedJobs;
+    MyList<JobNode*> matchedJobs;
     JobNode* tempJob = jobHead;
 
     // Search for matching jobs
@@ -158,26 +224,26 @@ int main() {
         tempJob = tempJob->next;
     }
 
-    if (matchedJobs.empty()) {
+    if (matchedJobs.size() == 0) {
         cout << "\nNo job descriptions found with that skill." << endl;
         return 0;
     }
 
     cout << "\nJobs found with \"" << keyword << "\":\n" << endl;
 
-    int showLimit = min(20, (int)matchedJobs.size());
+    int showLimit = (matchedJobs.size() < 20) ? matchedJobs.size() : 20;
     for (int i = 0; i < showLimit; i++) {
-        cout << i + 1 << ". " << matchedJobs[i]->description << endl;
+        cout << i + 1 << ". " << matchedJobs.at(i)->description << endl;
     }
 
-    if ((int)matchedJobs.size() > 20) {
+    if (matchedJobs.size() > 20) {
         char choice;
         cout << "\nMore than 20 jobs found. Do you want to see all? (y/n): ";
         cin >> choice;
 
         if (tolower(choice) == 'y') {
-            for (int i = 20; i < (int)matchedJobs.size(); i++) {
-                cout << i + 1 << ". " << matchedJobs[i]->description << endl;
+            for (int i = 20; i < matchedJobs.size(); i++) {
+                cout << i + 1 << ". " << matchedJobs.at(i)->description << endl;
             }
         }
     }
@@ -188,7 +254,7 @@ int main() {
     cout << "\nEnter the job number you want to analyze: ";
     cin >> jobChoice;
 
-    if (jobChoice < 1 || jobChoice > (int)matchedJobs.size()) {
+    if (jobChoice < 1 || jobChoice > matchedJobs.size()) {
         cout << "Invalid job number!" << endl;
         return 0;
     }
@@ -197,7 +263,7 @@ int main() {
     cout << "Enter the minimum percentage to display resumes (example: 50): ";
     cin >> minPercentage;
 
-    JobNode* selectedJob = matchedJobs[jobChoice - 1];
+    JobNode* selectedJob = matchedJobs.at(jobChoice - 1);
     cout << "\nSelected Job Description:\n" << selectedJob->description << endl;
 
     cout << "\n--- Resume Match Results ---" << endl;
@@ -206,8 +272,7 @@ int main() {
     auto startTime = high_resolution_clock::now();
 
     ResumeNode* tempResume = resumeHead;
-    vector<pair<string, double>> resumeResults;
-    int resumeIndex = 1;
+    MyList<pair<string, double>> resumeResults;
 
     while (tempResume) {
         double score = calculateMatchPercentage(selectedJob->description, tempResume->description);
@@ -215,25 +280,26 @@ int main() {
             resumeResults.push_back({tempResume->description, score});
         }
         tempResume = tempResume->next;
-        resumeIndex++;
     }
 
     // Show only first 20 resumes
-    int resumeLimit = min(20, (int)resumeResults.size());
+    int resumeLimit = (resumeResults.size() < 20) ? resumeResults.size() : 20;
     for (int i = 0; i < resumeLimit; i++) {
-        cout << i + 1 << ". " << resumeResults[i].first << endl;
-        cout << "   Score: " << resumeResults[i].second << "%" << endl << endl;
+        auto result = resumeResults.at(i);
+        cout << i + 1 << ". " << result.first << endl;
+        cout << "   Score: " << result.second << "%" << endl << endl;
     }
 
-    if ((int)resumeResults.size() > 20) {
+    if (resumeResults.size() > 20) {
         char choice;
         cout << "More than 20 resumes found. Do you want to see more resumes? (y/n): ";
         cin >> choice;
 
         if (tolower(choice) == 'y') {
-            for (int i = 20; i < (int)resumeResults.size(); i++) {
-                cout << i + 1 << ". " << resumeResults[i].first << endl;
-                cout << "   Score: " << resumeResults[i].second << "%" << endl << endl;
+            for (int i = 20; i < resumeResults.size(); i++) {
+                auto result = resumeResults.at(i);
+                cout << i + 1 << ". " << result.first << endl;
+                cout << "   Score: " << result.second << "%" << endl << endl;
             }
         }
     }
