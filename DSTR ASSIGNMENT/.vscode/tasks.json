@@ -1,0 +1,23 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build and Run DSTR (PowerShell)",
+            "type": "shell",
+            "command": "powershell",
+            "args": [
+                "-Command",
+                "g++ DSTR.cpp linked_v1.cpp linked_v2.cpp array_v1.cpp array_v2.cpp -std=c++17 -O2 -o DSTR; if ($?) { ./DSTR }"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        }
+    ]
+}
