@@ -102,7 +102,7 @@ void runLinkedVersion() {
     cin.ignore(numeric_limits<streamsize>::max(), '\n');
 
     double matchThreshold;
-    cout << "Enter percentage for resume matching (example: 50): " << flush;
+    cout << "Enter percentage for resume matching (example: 25): " << flush;
     cin >> matchThreshold;
 
     if (cin.fail() || matchThreshold < 1 || matchThreshold > 100) {

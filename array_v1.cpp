@@ -1,7 +1,7 @@
 #include "common.h"
 
 void runArrayVersion() {
-    cout << "\n=== Array List (Job > Resume) ===\n";
+    cout << "\n=== Array List (Resume > Job) ===\n";
 
     DynamicArray<Item> resumes;
     DynamicArray<Item> jobs;
@@ -85,7 +85,7 @@ void runArrayVersion() {
     cin.ignore(numeric_limits<streamsize>::max(), '\n');
 
     double matchThreshold;
-    cout << "Enter percentage for job matching (example: 50): " << flush;
+    cout << "Enter percentage for job matching (example: 25): " << flush;
     if (!(cin >> matchThreshold)) return;
     cin.ignore(numeric_limits<streamsize>::max(), '\n');
 

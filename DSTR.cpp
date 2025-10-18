@@ -14,8 +14,8 @@ int main() {
         cout << "=================================\n";
         cout << "1. Linked List (Job > Resume)\n";
         cout << "2. Linked List (Resume > Job)\n";
-        cout << "3. Array List (Job > Resume)\n";
-        cout << "4. Array List (Resume > Job)\n";
+        cout << "3. Array List (Resume > Job)\n";
+        cout << "4. Array List (Job > Resume)\n";
         cout << "0. Exit\n";
         cout << "Select option: ";
 
