@@ -1,5 +1,7 @@
 #include <iostream>
 #include "common.h"
+#include <windows.h>
+#include <psapi.h>
 
 // declare run functions
 void runLinkedVersion();
@@ -8,6 +10,7 @@ void runArrayVersion();
 void runArrayVersion2();
 
 int main() {
+    
     while (true) {
         cout << "\n=================================\n";
         cout << "       DSTR - MAIN MENU\n";

@@ -4,10 +4,11 @@
     "code-runner.runInTerminal": true,
     "files.autoSave": "afterDelay",
 
-    //Compile and run all C++ files in DSTR project
+    // Compile and run all C++ files in DSTR project
     "code-runner.executorMap": {
-        "cpp": "g++ DSTR.cpp linked_v1.cpp linked_v2.cpp array_v1.cpp array_v2.cpp -std=c++17 -O2 -o DSTR && ./DSTR"
+        "cpp": "g++ DSTR.cpp linked_v1.cpp linked_v2.cpp array_v1.cpp array_v2.cpp -std=c++17 -O2 -o DSTR -lpsapi && ./DSTR"
     },
+
     "code-runner.saveFileBeforeRun": true,
     "files.associations": {
         "*.dbclient-js": "javascript",

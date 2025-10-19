@@ -171,4 +171,5 @@ void runArrayVersion2() {
     cout << "Resumes matched with above " << matchThreshold << "%: "
          << qualifiedResumeIndices.size() << endl;
     cout << "Time Taken: " << elapsed << " milliseconds\n";
+    cout << "Memory Used: " << getMemoryUsageKB() << " KB\n";
 }

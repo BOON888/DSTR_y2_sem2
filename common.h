@@ -10,7 +10,8 @@
 #include <cctype>
 #include <iomanip>
 #include <limits>
-
+#include <windows.h>
+#include <psapi.h>
 using namespace std;
 using namespace std::chrono;
 
@@ -178,6 +179,12 @@ inline int countMatches(const DynamicArray<string>& rwords, const DynamicArray<s
         }
     }
     return cnt;
+}
+
+inline size_t getMemoryUsageKB() {
+    PROCESS_MEMORY_COUNTERS memInfo;
+    GetProcessMemoryInfo(GetCurrentProcess(), &memInfo, sizeof(memInfo));
+    return memInfo.WorkingSetSize / 1024; // returns memory in KB
 }
 
 #endif // COMMON_H

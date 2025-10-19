@@ -229,4 +229,5 @@ void runLinkedVersion() {
     cout << "Total resumes checked: " << resumes.size() << endl;
     cout << "Resumes matched with above " << matchThreshold << "%: " << qualifiedResumeIdx.size() << endl;
     cout << "Time Taken (Matching Only): " << elapsed << " milliseconds\n";
+    cout << "Memory Used: " << getMemoryUsageKB() << " KB\n";
 }

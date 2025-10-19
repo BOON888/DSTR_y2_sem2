@@ -171,4 +171,5 @@ void runArrayVersion() {
     cout << "Jobs matched with above " << matchThreshold << "%: " 
          << qualifiedJobIndices.size() << endl;
     cout << "Time Taken: " << elapsed << " milliseconds\n";
+    cout << "Memory Used: " << getMemoryUsageKB() << " KB\n";
 }

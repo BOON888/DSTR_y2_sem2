@@ -224,4 +224,5 @@ void runLinkedVersion2() {
     cout << "Total jobs checked: " << jobs.size() << endl;
     cout << "Jobs matched with above " << matchThreshold << "%: " << qualifiedJobs.size() << endl;
     cout << "Time Taken (Matching Only): " << elapsed << " milliseconds\n";
+    cout << "Memory Used: " << getMemoryUsageKB() << " KB\n";
 }
