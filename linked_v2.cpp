@@ -1,10 +1,8 @@
 #include "common.h"
 #include <thread>
 
-
 void runLinkedVersion2() {
     cout << "\n=== Linked List (Resume > Job) ===\n";
-
     LinkedList<Item> resumes, jobs;
     if (!loadCSV_Linked("resume.csv", resumes)) {
         cout << "Cannot open resume.csv.\n";
@@ -19,7 +17,6 @@ void runLinkedVersion2() {
 
     // ==========================
     // STAGE 1: FILTER RESUMES BY SKILL
-    // (This is the equivalent of STAGE 1 in V1, filtering the primary item list)
     // ==========================
     string skill;
     cout << "\nEnter skill to search (example: sql): " << flush;
@@ -90,7 +87,6 @@ void runLinkedVersion2() {
 
     // ==========================
     // STAGE 2: MATCH JOBS FOR SELECTED RESUME
-    // (This is the equivalent of STAGE 2 in V1, matching the secondary item list)
     // ==========================
     int chosenIndex = 0;
     cout << "Enter resume number to match with jobs (0 to exit): " << flush;
@@ -122,14 +118,12 @@ void runLinkedVersion2() {
     cout << "STAGE 2: JOB MATCHING FOR RESUME " << chosenIndex << "\n";
     cout << "===============================\n";
 
-    auto start = chrono::high_resolution_clock::now();
-
-    //Find selected resume using displayed number
+    // Find selected resume
     Node<int>* selNode = matchedResumesIdx.getHead();
     int selectedResumeIndex = -1;
 
     while (selNode) {
-        if (selNode->data + 1 == chosenIndex) { // Match actual displayed number
+        if (selNode->data + 1 == chosenIndex) {
             selectedResumeIndex = selNode->data;
             break;
         }
@@ -151,26 +145,31 @@ void runLinkedVersion2() {
     }
 
     cout << "\nSelected Resume (" << chosenIndex << "):\n"
-         << selectedResumeNode->data.originalText << "\n\n";
+        << selectedResumeNode->data.originalText << "\n\n";
 
     // ==========================
-    // MATCHING JOBS
+    // MATCHING JOBS — TIMED SECTION
     // ==========================
+    auto start = chrono::high_resolution_clock::now();
+
     LinkedList<pair<int, double>> qualifiedJobs;
     int jIdx = 0;
     for (Node<Item>* jNode = jobs.getHead(); jNode; jNode = jNode->next, ++jIdx) {
-        // MATCHING LOGIC: Resume words matched against Job words
         DynamicArray<string> resumeWords = tokenizeLower(selectedResumeNode->data.text);
         DynamicArray<string> jobWords = tokenizeLower(jNode->data.text);
         int matches = countMatches(resumeWords, jobWords);
-        
-        // Percentage calculated based on *Resume* word count
         double percent = (resumeWords.size() == 0) ? 0.0 : ((double)matches / resumeWords.size()) * 100.0;
 
         if (percent >= matchThreshold)
             qualifiedJobs.push_back({jIdx, percent});
     }
 
+    auto end = chrono::high_resolution_clock::now();
+    auto elapsed = chrono::duration_cast<chrono::milliseconds>(end - start).count();
+
+    // ==========================
+    // DISPLAY RESULTS (NOT TIMED)
+    // ==========================
     cout << "Total jobs matched with above " << matchThreshold << "%: " << qualifiedJobs.size() << endl;
 
     if (qualifiedJobs.size() == 0) {
@@ -187,13 +186,13 @@ void runLinkedVersion2() {
 
             if (j) {
                 cout << "Job " << idx + 1 << " (" << fixed << setprecision(2)
-                     << percent << "%): " << j->data.originalText << "\n";
+                    << percent << "%): " << j->data.originalText << "\n";
             }
         }
 
         char jobChoice;
         cout << "\nDo you want to print all " << qualifiedJobs.size()
-             << " matching jobs? (y/n): " << flush;
+            << " matching jobs? (y/n): " << flush;
         cin >> jobChoice;
         cin.ignore(numeric_limits<streamsize>::max(), '\n');
 
@@ -209,7 +208,7 @@ void runLinkedVersion2() {
 
                 if (j) {
                     cout << "Job " << idx + 1 << " (" << fixed << setprecision(2)
-                         << percent << "%): " << j->data.originalText << "\n";
+                        << percent << "%): " << j->data.originalText << "\n";
                 }
                 fullNode = fullNode->next;
             }
@@ -219,13 +218,10 @@ void runLinkedVersion2() {
         }
     }
 
-    auto end = chrono::high_resolution_clock::now();
-    auto elapsed = chrono::duration_cast<chrono::milliseconds>(end - start).count();
-
     cout << "\n=========================================\n";
     cout << "STAGE 2 SUMMARY (RESUME " << chosenIndex << ")\n";
     cout << "=========================================\n";
     cout << "Total jobs checked: " << jobs.size() << endl;
     cout << "Jobs matched with above " << matchThreshold << "%: " << qualifiedJobs.size() << endl;
-    cout << "Time Taken: " << elapsed << " milliseconds\n";
+    cout << "Time Taken (Matching Only): " << elapsed << " milliseconds\n";
 }

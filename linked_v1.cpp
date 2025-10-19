@@ -3,7 +3,6 @@
 
 void runLinkedVersion() {
     cout << "\n=== Linked List (Job > Resume) ===\n";
-
     LinkedList<Item> jobs, resumes;
 
     if (!loadCSV_Linked("job_description.csv", jobs)) {
@@ -117,14 +116,12 @@ void runLinkedVersion() {
     cout << "STAGE 2: RESUME MATCHING FOR JOB " << chosenIndex << "\n";
     cout << "===============================\n";
 
-    auto start = chrono::high_resolution_clock::now();
-
-    //Find selected job using displayed number
+    // Find selected job using displayed number
     Node<int>* selNode = matchedJobsIdx.getHead();
     int selectedJobIndex = -1;
 
     while (selNode) {
-        if (selNode->data + 1 == chosenIndex) { // Match actual displayed number
+        if (selNode->data + 1 == chosenIndex) {
             selectedJobIndex = selNode->data;
             break;
         }
@@ -146,11 +143,13 @@ void runLinkedVersion() {
     }
 
     cout << "\nSelected Job (" << chosenIndex << "):\n"
-         << selectedJobNode->data.originalText << "\n\n";
+        << selectedJobNode->data.originalText << "\n\n";
 
     // ==========================
-    // MATCHING RESUMES
+    // MATCHING RESUMES — TIMED SECTION
     // ==========================
+    auto start = chrono::high_resolution_clock::now();
+
     LinkedList<int> qualifiedResumeIdx;
     int rIdx = 0;
     for (Node<Item>* rNode = resumes.getHead(); rNode; rNode = rNode->next, ++rIdx) {
@@ -163,6 +162,12 @@ void runLinkedVersion() {
             qualifiedResumeIdx.push_back(rIdx);
     }
 
+    auto end = chrono::high_resolution_clock::now();
+    auto elapsed = chrono::duration_cast<chrono::milliseconds>(end - start).count();
+
+    // ==========================
+    // DISPLAY RESULTS (NOT TIMED)
+    // ==========================
     cout << "Total resumes matched with above " << matchThreshold << "%: " << qualifiedResumeIdx.size() << endl;
 
     if (qualifiedResumeIdx.size() == 0) {
@@ -183,13 +188,13 @@ void runLinkedVersion() {
                 double percent = (jobWords.size() == 0) ? 0.0 : ((double)matches / jobWords.size()) * 100.0;
 
                 cout << "Resume " << idx + 1 << " (" << fixed << setprecision(2)
-                     << percent << "%): " << r->data.originalText << "\n";
+                    << percent << "%): " << r->data.originalText << "\n";
             }
         }
 
         char resChoice;
         cout << "\nDo you want to print all " << qualifiedResumeIdx.size()
-             << " matching resumes? (y/n): " << flush;
+            << " matching resumes? (y/n): " << flush;
         cin >> resChoice;
         cin.ignore(numeric_limits<streamsize>::max(), '\n');
 
@@ -208,7 +213,7 @@ void runLinkedVersion() {
                     double percent = (jobWords.size() == 0) ? 0.0 : ((double)matches / jobWords.size()) * 100.0;
 
                     cout << "Resume " << idx + 1 << " (" << fixed << setprecision(2)
-                         << percent << "%): " << r->data.originalText << "\n";
+                        << percent << "%): " << r->data.originalText << "\n";
                 }
                 fullNode = fullNode->next;
             }
@@ -218,13 +223,10 @@ void runLinkedVersion() {
         }
     }
 
-    auto end = chrono::high_resolution_clock::now();
-    auto elapsed = chrono::duration_cast<chrono::milliseconds>(end - start).count();
-
     cout << "\n=========================================\n";
     cout << "STAGE 2 SUMMARY (JOB " << chosenIndex << ")\n";
     cout << "=========================================\n";
     cout << "Total resumes checked: " << resumes.size() << endl;
     cout << "Resumes matched with above " << matchThreshold << "%: " << qualifiedResumeIdx.size() << endl;
-    cout << "Time Taken: " << elapsed << " milliseconds\n";
+    cout << "Time Taken (Matching Only): " << elapsed << " milliseconds\n";
 }

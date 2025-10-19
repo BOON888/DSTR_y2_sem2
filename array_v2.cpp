@@ -1,7 +1,7 @@
 #include "common.h"
 
 void runArrayVersion2() {
-    cout << "\n=== Array List (Job > Resume) ===\n";
+    cout << "\n=== Array (Job > Resume) ===\n";
 
     DynamicArray<Item> resumes;
     DynamicArray<Item> jobs;
@@ -93,8 +93,6 @@ void runArrayVersion2() {
     cout << "STAGE 2: RESUME MATCHING FOR JOB " << chosenIndex << "\n";
     cout << "===============================\n";
 
-    auto start = chrono::high_resolution_clock::now();
-
     int idx = chosenIndex - 1;
     cout << "Job " << chosenIndex << ": "
          << jobs[idx].originalText << "\n";
@@ -103,6 +101,9 @@ void runArrayVersion2() {
 
     // Store all qualified resumes
     DynamicArray<int> qualifiedResumeIndices;
+
+    // ✅ Start timing ONLY the matching process
+    auto start = chrono::high_resolution_clock::now();
 
     for (int r = 0; r < resumes.size(); ++r) {
         DynamicArray<string> rwords = tokenizeLower(resumes[r].text);
@@ -115,6 +116,10 @@ void runArrayVersion2() {
             qualifiedResumeIndices.push_back(r);
         }
     }
+
+    // ✅ End timing right after the matching loop
+    auto end = chrono::high_resolution_clock::now();
+    auto elapsed = chrono::duration_cast<chrono::milliseconds>(end - start).count();
 
     cout << "\nTotal resumes matched with above " << matchThreshold << "%: "
          << qualifiedResumeIndices.size() << endl;
@@ -158,9 +163,6 @@ void runArrayVersion2() {
             cout << "Skipped printing full resume list.\n";
         }
     }
-
-    auto end = chrono::high_resolution_clock::now();
-    auto elapsed = chrono::duration_cast<chrono::milliseconds>(end - start).count();
 
     cout << "\n=========================================\n";
     cout << "STAGE 2 SUMMARY (JOB " << chosenIndex << ")\n";
