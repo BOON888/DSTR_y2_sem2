@@ -150,7 +150,13 @@ void runLinkedVersion() {
     // ==========================
     auto start = chrono::high_resolution_clock::now();
 
-    LinkedList<int> qualifiedResumeIdx;
+    struct ResumeMatch {
+        int index;
+        double percent;
+    };
+
+    LinkedList<ResumeMatch> matchedResumes;
+
     int rIdx = 0;
     for (Node<Item>* rNode = resumes.getHead(); rNode; rNode = rNode->next, ++rIdx) {
         DynamicArray<string> jobWords = tokenizeLower(selectedJobNode->data.text);
@@ -158,63 +164,80 @@ void runLinkedVersion() {
         int matches = countMatches(jobWords, resumeWords);
         double percent = (jobWords.size() == 0) ? 0.0 : ((double)matches / jobWords.size()) * 100.0;
 
-        if (percent >= matchThreshold)
-            qualifiedResumeIdx.push_back(rIdx);
+        if (percent >= matchThreshold) {
+            ResumeMatch rm{rIdx, percent};
+            matchedResumes.push_back(rm);
+        }
     }
 
     auto end = chrono::high_resolution_clock::now();
     auto elapsed = chrono::duration_cast<chrono::milliseconds>(end - start).count();
 
-    // ==========================
-    // DISPLAY RESULTS (NOT TIMED)
-    // ==========================
-    cout << "Total resumes matched with above " << matchThreshold << "%: " << qualifiedResumeIdx.size() << endl;
+    cout << "Total resumes matched with above " << matchThreshold << "%: " 
+        << matchedResumes.size() << endl;
 
-    if (qualifiedResumeIdx.size() == 0) {
+    // ==========================
+    // SORT MATCHED RESUMES (DESCENDING)
+    // ==========================
+    if (matchedResumes.size() > 1) {
+        bool swapped;
+        do {
+            swapped = false;
+            Node<ResumeMatch>* curr = matchedResumes.getHead();
+            while (curr && curr->next) {
+                if (curr->data.percent < curr->next->data.percent) {
+                    swap(curr->data, curr->next->data);
+                    swapped = true;
+                }
+                curr = curr->next;
+            }
+        } while (swapped);
+    }
+
+    // ==========================
+    // DISPLAY RESULTS (SORTED)
+    // ==========================
+    if (matchedResumes.size() == 0) {
         cout << "No resumes qualified for this job.\n";
     } else {
-        cout << "\n--- Showing first " << min(20, qualifiedResumeIdx.size()) << " matching resumes ---\n";
-        Node<int>* resNode = qualifiedResumeIdx.getHead();
-        for (int i = 0; i < min(20, qualifiedResumeIdx.size()) && resNode; ++i, resNode = resNode->next) {
-            int idx = resNode->data;
+        cout << "\n--- Top Matching Resumes (Sorted by % Match) ---\n";
+        Node<ResumeMatch>* node = matchedResumes.getHead();
+        int count = 0;
+        while (node && count < 20) { // only first 20
+            int idx = node->data.index;
+            double percent = node->data.percent;
 
             Node<Item>* r = resumes.getHead();
             for (int c = 0; c < idx && r; ++c) r = r->next;
 
-            if (r) {
-                DynamicArray<string> jobWords = tokenizeLower(selectedJobNode->data.text);
-                DynamicArray<string> resumeWords = tokenizeLower(r->data.text);
-                int matches = countMatches(jobWords, resumeWords);
-                double percent = (jobWords.size() == 0) ? 0.0 : ((double)matches / jobWords.size()) * 100.0;
-
+            if (r)
                 cout << "Resume " << idx + 1 << " (" << fixed << setprecision(2)
                     << percent << "%): " << r->data.originalText << "\n";
-            }
+
+            node = node->next;
+            ++count;
         }
 
         char resChoice;
-        cout << "\nDo you want to print all " << qualifiedResumeIdx.size()
+        cout << "\nDo you want to print all " << matchedResumes.size()
             << " matching resumes? (y/n): " << flush;
         cin >> resChoice;
         cin.ignore(numeric_limits<streamsize>::max(), '\n');
 
         if (resChoice == 'y' || resChoice == 'Y') {
-            cout << "\n--- All Matching Resumes ---\n";
-            Node<int>* fullNode = qualifiedResumeIdx.getHead();
+            cout << "\n--- All Matching Resumes (Sorted High → Low) ---\n";
+            Node<ResumeMatch>* fullNode = matchedResumes.getHead();
             while (fullNode) {
-                int idx = fullNode->data;
+                int idx = fullNode->data.index;
+                double percent = fullNode->data.percent;
+
                 Node<Item>* r = resumes.getHead();
                 for (int c = 0; c < idx && r; ++c) r = r->next;
 
-                if (r) {
-                    DynamicArray<string> jobWords = tokenizeLower(selectedJobNode->data.text);
-                    DynamicArray<string> resumeWords = tokenizeLower(r->data.text);
-                    int matches = countMatches(jobWords, resumeWords);
-                    double percent = (jobWords.size() == 0) ? 0.0 : ((double)matches / jobWords.size()) * 100.0;
-
+                if (r)
                     cout << "Resume " << idx + 1 << " (" << fixed << setprecision(2)
                         << percent << "%): " << r->data.originalText << "\n";
-                }
+
                 fullNode = fullNode->next;
             }
             cout << "-----------------------------\n";
@@ -227,7 +250,7 @@ void runLinkedVersion() {
     cout << "STAGE 2 SUMMARY (JOB " << chosenIndex << ")\n";
     cout << "=========================================\n";
     cout << "Total resumes checked: " << resumes.size() << endl;
-    cout << "Resumes matched with above " << matchThreshold << "%: " << qualifiedResumeIdx.size() << endl;
+    cout << "Resumes matched with above " << matchThreshold << "%: " << matchedResumes.size() << endl;
     cout << "Time Taken (Matching Only): " << elapsed << " milliseconds\n";
     cout << "Memory Used: " << getMemoryUsageKB() << " KB\n";
 }

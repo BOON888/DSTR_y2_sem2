@@ -168,26 +168,47 @@ void runLinkedVersion2() {
     auto elapsed = chrono::duration_cast<chrono::milliseconds>(end - start).count();
 
     // ==========================
-    // DISPLAY RESULTS (NOT TIMED)
+    // SORT MATCHED JOBS (DESCENDING BY %)
+    // ==========================
+    if (qualifiedJobs.size() > 1) {
+        bool swapped;
+        do {
+            swapped = false;
+            Node<pair<int, double>>* curr = qualifiedJobs.getHead();
+            while (curr && curr->next) {
+                if (curr->data.second < curr->next->data.second) { // sort descending
+                    swap(curr->data, curr->next->data);
+                    swapped = true;
+                }
+                curr = curr->next;
+            }
+        } while (swapped);
+    }
+
+    // ==========================
+    // DISPLAY RESULTS (SORTED)
     // ==========================
     cout << "Total jobs matched with above " << matchThreshold << "%: " << qualifiedJobs.size() << endl;
 
     if (qualifiedJobs.size() == 0) {
         cout << "No jobs qualified for this resume.\n";
     } else {
-        cout << "\n--- Showing first " << min(20, qualifiedJobs.size()) << " matching jobs ---\n";
+        cout << "\n--- Top Matching Jobs (Sorted by % Match) ---\n";
         Node<pair<int, double>>* jobNode = qualifiedJobs.getHead();
-        for (int i = 0; i < min(20, qualifiedJobs.size()) && jobNode; ++i, jobNode = jobNode->next) {
+        int count = 0;
+        while (jobNode && count < 20) { // show top 20
             int idx = jobNode->data.first;
             double percent = jobNode->data.second;
 
             Node<Item>* j = jobs.getHead();
             for (int c = 0; c < idx && j; ++c) j = j->next;
 
-            if (j) {
+            if (j)
                 cout << "Job " << idx + 1 << " (" << fixed << setprecision(2)
                     << percent << "%): " << j->data.originalText << "\n";
-            }
+
+            jobNode = jobNode->next;
+            ++count;
         }
 
         char jobChoice;
@@ -197,7 +218,7 @@ void runLinkedVersion2() {
         cin.ignore(numeric_limits<streamsize>::max(), '\n');
 
         if (jobChoice == 'y' || jobChoice == 'Y') {
-            cout << "\n--- All Matching Jobs ---\n";
+            cout << "\n--- All Matching Jobs (Sorted High → Low) ---\n";
             Node<pair<int, double>>* fullNode = qualifiedJobs.getHead();
             while (fullNode) {
                 int idx = fullNode->data.first;
@@ -206,10 +227,10 @@ void runLinkedVersion2() {
                 Node<Item>* j = jobs.getHead();
                 for (int c = 0; c < idx && j; ++c) j = j->next;
 
-                if (j) {
+                if (j)
                     cout << "Job " << idx + 1 << " (" << fixed << setprecision(2)
                         << percent << "%): " << j->data.originalText << "\n";
-                }
+
                 fullNode = fullNode->next;
             }
             cout << "-----------------------------\n";

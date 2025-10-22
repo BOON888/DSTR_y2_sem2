@@ -99,10 +99,15 @@ void runArrayVersion() {
 
     DynamicArray<string> rwords = tokenizeLower(resumes[idx].text);
 
-    // Store all qualified jobs
-    DynamicArray<int> qualifiedJobIndices;
+    // Structure to hold job index + percent match
+    struct JobMatch {
+        int index;
+        double percent;
+    };
 
-    // ✅ Start timing only the matching computation
+    DynamicArray<JobMatch> matchedJobs;
+
+    // ✅ Start timing
     auto start = chrono::high_resolution_clock::now();
 
     for (int j = 0; j < jobs.size(); ++j) {
@@ -113,50 +118,55 @@ void runArrayVersion() {
             : ((double)matches / (double)rwords.size()) * 100.0;
 
         if (percent >= matchThreshold) {
-            qualifiedJobIndices.push_back(j);
+            matchedJobs.push_back({j, percent});
         }
     }
 
-    // ✅ End timing immediately after the matching loop
+    // ✅ Sort by descending percentage
+    for (int i = 0; i < matchedJobs.size() - 1; ++i) {
+        for (int k = i + 1; k < matchedJobs.size(); ++k) {
+            if (matchedJobs[k].percent > matchedJobs[i].percent) {
+                JobMatch temp = matchedJobs[i];
+                matchedJobs[i] = matchedJobs[k];
+                matchedJobs[k] = temp;
+            }
+        }
+    }
+
+    // ✅ End timing
     auto end = chrono::high_resolution_clock::now();
     auto elapsed = chrono::duration_cast<chrono::milliseconds>(end - start).count();
 
     cout << "\nTotal jobs matched with above " << matchThreshold << "%: "
-         << qualifiedJobIndices.size() << endl;
+        << matchedJobs.size() << endl;
 
-    if (qualifiedJobIndices.size() == 0) {
-        cout << "This resume did not qualify for any job.\n";
+    if (matchedJobs.size() == 0) {
+        cout << "This resume did not qualify for any jobs.\n";
     } else {
         // Print first 20 results only
-        cout << "\n--- Showing first " 
-             << min(20, qualifiedJobIndices.size()) << " matching jobs ---\n";
-        for (int i = 0; i < min(20, qualifiedJobIndices.size()); ++i) {
-            int j = qualifiedJobIndices[i];
-            DynamicArray<string> jwords = tokenizeLower(jobs[j].text);
-            int matches = countMatches(rwords, jwords);
-            double percent = ((double)matches / (double)rwords.size()) * 100.0;
-            cout << "Job " << (j + 1) << " (" 
-                 << fixed << setprecision(2) << percent << "%): "
-                 << jobs[j].originalText << "\n";
+        cout << "\n--- Showing first "
+            << min(20, matchedJobs.size()) << " matching jobs (sorted high → low) ---\n";
+        for (int i = 0; i < min(20, matchedJobs.size()); ++i) {
+            int j = matchedJobs[i].index;
+            double p = matchedJobs[i].percent;
+            cout << "Job " << (j + 1) << " (" << fixed << setprecision(2)
+                << p << "%): " << jobs[j].originalText << "\n";
         }
 
         // Ask if want to print all
         char jobChoice;
-        cout << "\nDo you want to print all " << qualifiedJobIndices.size()
-             << " matching jobs? (y/n): " << flush;
+        cout << "\nDo you want to print all " << matchedJobs.size()
+            << " matching jobs? (y/n): " << flush;
         cin >> jobChoice;
         cin.ignore(numeric_limits<streamsize>::max(), '\n');
 
         if (jobChoice == 'y' || jobChoice == 'Y') {
-            cout << "\n--- All Matching Jobs ---\n";
-            for (int i = 0; i < qualifiedJobIndices.size(); ++i) {
-                int j = qualifiedJobIndices[i];
-                DynamicArray<string> jwords = tokenizeLower(jobs[j].text);
-                int matches = countMatches(rwords, jwords);
-                double percent = ((double)matches / (double)rwords.size()) * 100.0;
-                cout << "Job " << (j + 1) << " (" 
-                     << fixed << setprecision(2) << percent << "%): "
-                     << jobs[j].originalText << "\n";
+            cout << "\n--- All Matching Jobs (Sorted High → Low) ---\n";
+            for (int i = 0; i < matchedJobs.size(); ++i) {
+                int j = matchedJobs[i].index;
+                double p = matchedJobs[i].percent;
+                cout << "Job " << (j + 1) << " (" << fixed << setprecision(2)
+                    << p << "%): " << jobs[j].originalText << "\n";
             }
             cout << "-----------------------------\n";
         } else {
@@ -164,12 +174,13 @@ void runArrayVersion() {
         }
     }
 
+
     cout << "\n=========================================\n";
     cout << "STAGE 2 SUMMARY (RESUME " << chosenIndex << ")\n";
     cout << "=========================================\n";
     cout << "Total jobs checked: " << jobs.size() << endl;
     cout << "Jobs matched with above " << matchThreshold << "%: " 
-         << qualifiedJobIndices.size() << endl;
+         << matchedJobs.size() << endl;
     cout << "Time Taken: " << elapsed << " milliseconds\n";
     cout << "Memory Used: " << getMemoryUsageKB() << " KB\n";
 }
