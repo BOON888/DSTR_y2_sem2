@@ -15,9 +15,9 @@ void runLinkedVersion2() {
 
     cout << "Loaded " << resumes.size() << " resumes and " << jobs.size() << " jobs.\n";
 
-    // ==========================
+    
     // STAGE 1: FILTER RESUMES BY SKILL
-    // ==========================
+    
     string skill;
     cout << "\nEnter skill to search (example: sql): " << flush;
     getline(cin, skill);
@@ -85,9 +85,9 @@ void runLinkedVersion2() {
     cout << "Matching resumes found: " << matchedResumesIdx.size() << endl;
     cout << "-----------------------------------------\n";
 
-    // ==========================
+
     // STAGE 2: MATCH JOBS FOR SELECTED RESUME
-    // ==========================
+
     int chosenIndex = 0;
     cout << "Enter resume number to match with jobs (0 to exit): " << flush;
     if (!(cin >> chosenIndex)) {
@@ -147,9 +147,9 @@ void runLinkedVersion2() {
     cout << "\nSelected Resume (" << chosenIndex << "):\n"
         << selectedResumeNode->data.originalText << "\n\n";
 
-    // ==========================
+    
     // MATCHING JOBS — TIMED SECTION
-    // ==========================
+    
     auto start = chrono::high_resolution_clock::now();
 
     LinkedList<pair<int, double>> qualifiedJobs;
@@ -167,16 +167,16 @@ void runLinkedVersion2() {
     auto end = chrono::high_resolution_clock::now();
     auto elapsed = chrono::duration_cast<chrono::milliseconds>(end - start).count();
 
-    // ==========================
+    
     // SORT MATCHED JOBS (DESCENDING BY %)
-    // ==========================
+    
     if (qualifiedJobs.size() > 1) {
         bool swapped;
         do {
             swapped = false;
             Node<pair<int, double>>* curr = qualifiedJobs.getHead();
             while (curr && curr->next) {
-                if (curr->data.second < curr->next->data.second) { // sort descending
+                if (curr->data.second < curr->next->data.second) {
                     swap(curr->data, curr->next->data);
                     swapped = true;
                 }
@@ -185,9 +185,9 @@ void runLinkedVersion2() {
         } while (swapped);
     }
 
-    // ==========================
+    
     // DISPLAY RESULTS (SORTED)
-    // ==========================
+    
     cout << "Total jobs matched with above " << matchThreshold << "%: " << qualifiedJobs.size() << endl;
 
     if (qualifiedJobs.size() == 0) {
@@ -196,7 +196,7 @@ void runLinkedVersion2() {
         cout << "\n--- Top Matching Jobs (Sorted by % Match) ---\n";
         Node<pair<int, double>>* jobNode = qualifiedJobs.getHead();
         int count = 0;
-        while (jobNode && count < 20) { // show top 20
+        while (jobNode && count < 20) { 
             int idx = jobNode->data.first;
             double percent = jobNode->data.second;
 

@@ -107,7 +107,7 @@ void runArrayVersion() {
 
     DynamicArray<JobMatch> matchedJobs;
 
-    // ✅ Start timing
+    //Start timing
     auto start = chrono::high_resolution_clock::now();
 
     for (int j = 0; j < jobs.size(); ++j) {
@@ -122,7 +122,7 @@ void runArrayVersion() {
         }
     }
 
-    // ✅ Sort by descending percentage
+    //Sort by descending percentage
     for (int i = 0; i < matchedJobs.size() - 1; ++i) {
         for (int k = i + 1; k < matchedJobs.size(); ++k) {
             if (matchedJobs[k].percent > matchedJobs[i].percent) {
@@ -133,7 +133,7 @@ void runArrayVersion() {
         }
     }
 
-    // ✅ End timing
+    //End timing
     auto end = chrono::high_resolution_clock::now();
     auto elapsed = chrono::duration_cast<chrono::milliseconds>(end - start).count();
 

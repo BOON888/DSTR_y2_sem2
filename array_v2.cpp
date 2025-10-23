@@ -107,7 +107,7 @@ void runArrayVersion2() {
 
     DynamicArray<ResumeMatch> matchedResumes;
 
-    // ✅ Start timing
+    //Start timing
     auto start = chrono::high_resolution_clock::now();
 
     for (int r = 0; r < resumes.size(); ++r) {
@@ -122,7 +122,7 @@ void runArrayVersion2() {
         }
     }
 
-    // ✅ Sort matched resumes by percentage (descending)
+    //Sort matched resumes by percentage (descending)
     for (int i = 0; i < matchedResumes.size() - 1; ++i) {
         for (int j = i + 1; j < matchedResumes.size(); ++j) {
             if (matchedResumes[j].percent > matchedResumes[i].percent) {
@@ -133,7 +133,7 @@ void runArrayVersion2() {
         }
     }
 
-    // ✅ End timing
+    //End timing
     auto end = chrono::high_resolution_clock::now();
     auto elapsed = chrono::duration_cast<chrono::milliseconds>(end - start).count();
 
@@ -152,7 +152,6 @@ void runArrayVersion2() {
                 << p << "%): " << resumes[r].originalText << "\n";
         }
 
-        // Ask if want to print all
         char resumeChoice;
         cout << "\nDo you want to print all " << matchedResumes.size()
             << " matching resumes? (y/n): " << flush;

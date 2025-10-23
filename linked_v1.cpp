@@ -16,9 +16,9 @@ void runLinkedVersion() {
 
     cout << "Loaded " << jobs.size() << " jobs and " << resumes.size() << " resumes.\n";
 
-    // ==========================
+    
     // STAGE 1: FILTER JOBS BY SKILL
-    // ==========================
+    
     string skill;
     cout << "\nEnter skill to search (example: sql): " << flush;
     getline(cin, skill);
@@ -83,9 +83,9 @@ void runLinkedVersion() {
     cout << "Matching jobs found: " << matchedJobsIdx.size() << endl;
     cout << "-----------------------------------------\n";
 
-    // ==========================
+    
     // STAGE 2: MATCH RESUMES FOR SELECTED JOB
-    // ==========================
+    
     int chosenIndex = 0;
     cout << "Enter job number to match with resumes (0 to exit): " << flush;
     if (!(cin >> chosenIndex)) {
@@ -145,9 +145,9 @@ void runLinkedVersion() {
     cout << "\nSelected Job (" << chosenIndex << "):\n"
         << selectedJobNode->data.originalText << "\n\n";
 
-    // ==========================
+    
     // MATCHING RESUMES — TIMED SECTION
-    // ==========================
+    
     auto start = chrono::high_resolution_clock::now();
 
     struct ResumeMatch {
@@ -176,9 +176,9 @@ void runLinkedVersion() {
     cout << "Total resumes matched with above " << matchThreshold << "%: " 
         << matchedResumes.size() << endl;
 
-    // ==========================
+    
     // SORT MATCHED RESUMES (DESCENDING)
-    // ==========================
+    
     if (matchedResumes.size() > 1) {
         bool swapped;
         do {
@@ -194,9 +194,9 @@ void runLinkedVersion() {
         } while (swapped);
     }
 
-    // ==========================
+    
     // DISPLAY RESULTS (SORTED)
-    // ==========================
+    
     if (matchedResumes.size() == 0) {
         cout << "No resumes qualified for this job.\n";
     } else {

@@ -15,9 +15,9 @@
 using namespace std;
 using namespace std::chrono;
 
-// =============================
-// DynamicArray Template (header-only)
-// =============================
+
+// DynamicArray Template
+
 template <typename T>
 class DynamicArray {
 private:
@@ -56,9 +56,8 @@ public:
     void clear() { length = 0; }
 };
 
-// =============================
 // Linked list templates (header-only)
-// =============================
+
 template <typename T>
 struct Node {
     T data;
@@ -98,12 +97,12 @@ public:
     int size() const { return length; }
 };
 
-// =============================
+
 // Shared structures and helpers
-// =============================
+
 struct Item {
-    string text;         // lowercased searchable text
-    string originalText; // original text
+    string text;
+    string originalText; 
 };
 
 inline string toLowerCase(string s) {
@@ -135,9 +134,9 @@ inline bool loadCSV_Array(const string& filename, DynamicArray<Item>& list) {
     ifstream file(filename);
     if (!file.is_open()) return false;
     string line;
-    // try to detect header; if first line contains comma or "desc" assume header
+    
     if (!getline(file, line)) return false;
-    // If header looks like data (no comma and not quoted), still fine — we keep behavior
+    
     while (getline(file, line)) {
         if (line.empty()) continue;
         string raw = line;
@@ -187,4 +186,4 @@ inline size_t getMemoryUsageKB() {
     return memInfo.WorkingSetSize / 1024; // returns memory in KB
 }
 
-#endif // COMMON_H
+#endif
